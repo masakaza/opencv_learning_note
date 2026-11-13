@@ -11,7 +11,8 @@
 5. [PnP 位姿估计与重投影误差](docs/05-pnp.md)
 6. [视频读写与目标关联](docs/06-video-and-tracking.md)
 7. [卡尔曼滤波目标跟踪](docs/07-kalman-filter.md)
-8. [源码索引](SOURCE_INDEX.md)
+8. [替换运动模型与过程噪声](docs/08-kalman-models.md)：随机游走、两种匀速噪声和匀加速白 jerk 模型。
+9. [源码索引](SOURCE_INDEX.md)
 
 ## 环境与编译
 
@@ -37,7 +38,7 @@ cd build
 
 ```text
 src/                 原始练习程序和各目标的 CMakeLists.txt
-include/             灯条检测、关联和透视变换辅助函数
+include/             灯条检测、关联、透视变换与可切换卡尔曼模型
 image/               代码引用的小型输入图片及 PnP 标定数据
 assets/figures/      文档使用的处理结果图
 image_output/        运行时结果目录；已提交少量 PNG 作为学习示例

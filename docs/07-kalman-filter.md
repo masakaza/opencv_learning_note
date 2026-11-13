@@ -192,3 +192,8 @@ Point2f filtered = centers.second;
 调用前的 `contours` 是 `findContours` 得到的轮廓集合；阈值 3000 是当前练习使用的面积门限。`basketball_analyse` 只有在 `valid == true` 时才会用 `index` 访问轮廓，所以空集合时要保证 `valid` 为 false。函数内部用 `minEnclosingCircle` 取中心和半径，滤波器暖机完成后先 `predict()`，检测有效时再构造 `(x,y)` 测量并 `correct()`。
 
 项目函数返回的两个中心有不同含义：`first` 在检测有效时是实测球心，检测丢失时变成预测球心；`second` 只有滤波器已启动且本帧有效检测时才写入校正后的中心。使用 `second` 前应检查是否已完成初始化和本帧检测有效，避免把未设置的 `Point2f` 当作结果。
+
+
+## 模型不只一种
+
+本任务的 `init_kalman_model` 是匀速状态 `[x,y,vx,vy]` 配合每帧随机加速度扰动的模型。考核若改变运动方程，必须同时考虑状态维度、`transitionMatrix`、`measurementMatrix` 和 `processNoiseCov`。新增的 [运动模型与过程噪声说明](08-kalman-models.md) 和 `include/kalman_motion_models.hpp` 给出随机游走、连续白加速度匀速及白 jerk 匀加速等可选方案。

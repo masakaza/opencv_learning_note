@@ -94,3 +94,11 @@ bitwise_or(redLow, redHigh, mask);
 ```
 
 如果掩模漏掉目标，先观察目标像素的 H/S/V，再按原因逐项放宽：色相不匹配调 H，颜色发灰时降低 S 下限，暗部漏检时降低 V 下限。若背景被大量选中，则收窄造成误检的通道范围。一次不要同时大幅放宽 H/S/V，否则很难判断是哪项改变起作用。
+
+## HSV 三维锥形示意图
+
+![HSV 三维锥体：色相为角度、饱和度为半径、明度为高度](../assets/figures/hsv_cone_diagram.png)
+
+图中把色相 H 画成绕中心轴的角度，饱和度 S 从灰度轴向外增加，明度 V 从黑色顶点向上增加。顶面表示 `V=255`，中心轴 `S=0` 是灰度；黑色顶点 `V=0` 时，色相与饱和度不再区分颜色。不同教材会把 HSV 画成圆锥或六角锥，这是对 HSV 坐标关系的几何示意。OpenCV 8-bit HSV 数值范围见上文；`cvtColor` 后的阈值仍应使用图像采样和 `inRange` 验证。
+
+可参考 [普林斯顿大学计算机图形学课程的 HSV 圆锥图](https://www.cs.princeton.edu/courses/archive/spr17/cos426/notes/cos426_s17_lecture01_intro_color.pdf)；OpenCV 的 HSV 转换与阈值流程见 [官方 `inRange` 教程](https://docs.opencv.org/4.x/da/d97/tutorial_threshold_inRange.html)。

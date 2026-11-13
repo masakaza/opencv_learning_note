@@ -1,6 +1,6 @@
 # 02｜颜色空间、阈值与形态学
 
-本章对应 `src/task_02/main.cpp` 和 `include/lighting_cap.hpp`。典型颜色检测流程是：BGR 转 HSV → 范围阈值变成二值掩模 → 形态学修补掩模 → 把掩模送给轮廓检测。
+本章对应 `src/task_02/main.cpp` 和 `include/lighting_cap.hpp`。典型颜色检测流程是：BGR 转 HSV → 范围阈值变成二值掩模 → 形态学修补掩模 → 把掩模送给轮廓检测。HSV 数值范围和可调整的滑块工具见 [HSV 色彩范围指示器](09-hsv-range-visualizer.md)。
 
 | 处理阶段 | 示例图 |
 |---|---|

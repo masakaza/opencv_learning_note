@@ -77,3 +77,118 @@ H = [1 0 0 0]
 3. 检测缺失时本代码只做 `predict()` 并绘制预测中心，不调用 `correct()`。这属于短时纯预测，连续丢帧越多误差通常越大；应设置最大外推帧数并在恢复检测时做关联判断。
 4. 当前 `statePost` 初始化取的是最近一次检测的中心，速度是前两中心差；要确保位置、速度都对应同一时刻。
 5. 只有一个最大面积轮廓被选作目标。多目标跟踪需要先做检测—轨迹关联，为每个轨迹维护自己的滤波器。
+
+## 按本项目参数初始化模型
+
+下面的初始化矩阵直接对应 `src/task_07/main.cpp::init_kalman_model`：状态顺序为 `(x, y, vx, vy)`，观测只有 `(x, y)`，`dt=1` 表示相邻视频帧间隔一个单位，`q=0.5`，`r=2.3`。
+
+```cpp
+void init_kalman_model(KalmanFilter& kf)
+{
+    kf.init(4, 2, 0, CV_32F); // 状态4维、测量2维、控制0维
+    const float dt = 1.0f;
+    const float q = 0.5f;
+    const float r = 2.3f;
+
+    kf.transitionMatrix = (Mat_<float>(4,4) <<
+        1,0,dt,0,
+        0,1,0,dt,
+        0,0,1, 0,
+        0,0,0, 1);
+
+    kf.measurementMatrix = (Mat_<float>(2,4) <<
+        1,0,0,0,
+        0,1,0,0);
+
+    // 白噪声加速度模型的过程噪声协方差
+    kf.processNoiseCov = q * (Mat_<float>(4,4) <<
+        dt*dt*dt*dt/4, 0,                  dt*dt*dt/2, 0,
+        0,                  dt*dt*dt*dt/4, 0,                  dt*dt*dt/2,
+        dt*dt*dt/2, 0,                  dt*dt,      0,
+        0,                  dt*dt*dt/2, 0,                  dt*dt);
+
+    kf.measurementNoiseCov = (Mat_<float>(2,2) <<
+        r,0,
+        0,r);
+}
+```
+
+这里 `q` 乘上由 `dt` 推导出的矩阵，形成完整的 `Q`；`r` 是测量噪声协方差 `R` 的两个对角元素。`kf.init` 会建立内部矩阵，但运动状态还要用实际检测数据初始化。
+
+## 首次状态与每帧怎么调用
+
+至少拿到两个连续有效检测中心，才能估计初速度。先把两帧位置和速度写进 `statePost`，之后每一帧先预测；若有检测，就再用测量值校正：
+
+```cpp
+KalmanFilter kf;
+init_kalman_model(kf);
+
+Point2f p0(120.0f, 80.0f);  // 前一帧的检测中心
+Point2f p1(126.0f, 84.0f);  // 当前帧的检测中心
+float dt = 1.0f;            // 两次检测间的帧数/时间单位
+kf.statePost = (Mat_<float>(4,1) <<
+    p1.x, p1.y,
+    (p1.x - p0.x) / dt,
+    (p1.y - p0.y) / dt);
+kf.errorCovPost = Mat::eye(4, 4, CV_32F); // 初始化状态协方差 P0
+
+// 后续每帧：先时间预测
+Mat predictedState = kf.predict();
+Point2f predictedCenter(predictedState.at<float>(0,0),
+                        predictedState.at<float>(1,0));
+
+if (detected) {
+    // detectedCenter 是本帧视觉检测出的中心点
+    Mat measurement = (Mat_<float>(2,1) <<
+        detectedCenter.x, detectedCenter.y);
+    Mat correctedState = kf.correct(measurement);
+    Point2f filteredCenter(correctedState.at<float>(0,0),
+                           correctedState.at<float>(1,0));
+    // 用 filteredCenter 画滤波后的位置；速度在索引 2、3
+} else {
+    // 没有测量时不调用 correct，只短时使用 predictedCenter 外推
+}
+```
+
+每个调用的对象和参数：
+
+- `kf.predict()`：不需要传参，返回 4×1 状态预测 `[x,y,vx,vy]`，并更新预测协方差。
+- `errorCovPost`：这里额外设为单位阵作为初始后验协方差；测量或速度初值更不确定时，应按噪声大小设置对角元素。原项目只设置了状态，没有显式初始化该矩阵。
+- `kf.correct(measurement)`：传入 2×1、`CV_32F` 的 `(x,y)` 测量矩阵，返回校正后的 4×1 状态。
+- `measurement.at<float>(0)`、`at<float>(1)`：取中心坐标；`correctedState.at<float>(2/3)` 是校正后的 x/y 速度。
+- `predict()` 要每帧调用一次。若本帧没有检测，保留预测即可；不要把无效的 `(0,0)` 当作真实观测传给 `correct()`。
+
+本项目 `basketball_analyse(...)` 把上述步骤封装起来：参数 `vaild` 表示本帧是否找到有效球，`index` 是最大轮廓索引，`contours_point` 是轮廓集合，`src` 用于画检测/预测/滤波结果，`kf` 是该目标持续复用的滤波器。返回 `pair<Point2f,Point2f>`：`first` 是检测中心或丢检时的预测中心，`second` 是有检测且滤波器已启动后的校正中心。每帧必须传同一个 `kf`，不能在循环里重新构造滤波器。
+
+### 对应 `circle` 画出三种位置
+
+```cpp
+circle(frame, detectedPixel, 5, Scalar(0,255,0), 2);  // 绿色：检测位置
+circle(frame, predictedPixel, 5, Scalar(0,0,255), 2); // 红色：预测位置
+circle(frame, filteredPixel, 5, Scalar(255,0,0), 2);  // 蓝色：校正后滤波位置
+```
+
+绘图坐标是整数 `Point`；状态坐标是浮点 `Point2f` 时，用 `Point(cvRound(x),cvRound(y))` 转换后再传给 `circle`。颜色参数是 BGR。
+
+> 当前源码的 `init_kalman_model` 设置了 `A/H/Q/R`，而 `statePost` 在两个检测中心到来后才初始化。上面的代码延续这个设计，并把初速度按实际 `dt` 计算。长时间丢检时预测会发散，应限制连续外推帧数；恢复检测后还需先判断测量是否仍属于同一目标。
+
+
+### 调用本项目的篮球跟踪函数
+
+主循环中先从轮廓得到有效标志和索引，再把同一个 `kf` 传给分析函数：
+
+```cpp
+KalmanFilter kf;
+init_kalman_model(kf); // 只初始化一次，不要每帧重置
+
+int index = getmax_area_contours(contours);
+bool valid = !contours.empty() && contourArea(contours[index]) > 3000;
+auto centers = basketball_analyse(valid, index, contours, frame, kf);
+
+Point2f detectedOrPredicted = centers.first;
+Point2f filtered = centers.second;
+```
+
+调用前的 `contours` 是 `findContours` 得到的轮廓集合；阈值 3000 是当前练习使用的面积门限。`basketball_analyse` 只有在 `valid == true` 时才会用 `index` 访问轮廓，所以空集合时要保证 `valid` 为 false。函数内部用 `minEnclosingCircle` 取中心和半径，滤波器暖机完成后先 `predict()`，检测有效时再构造 `(x,y)` 测量并 `correct()`。
+
+项目函数返回的两个中心有不同含义：`first` 在检测有效时是实测球心，检测丢失时变成预测球心；`second` 只有滤波器已启动且本帧有效检测时才写入校正后的中心。使用 `second` 前应检查是否已完成初始化和本帧检测有效，避免把未设置的 `Point2f` 当作结果。

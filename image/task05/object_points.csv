@@ -1,0 +1,9 @@
+model,corner,x_m,y_m,z_m
+small,LT,0,0.0675,0.028
+small,LB,0,0.0675,-0.028
+small,RB,0,-0.0675,-0.028
+small,RT,0,-0.0675,0.028
+large,LT,0,0.115,0.028
+large,LB,0,0.115,-0.028
+large,RB,0,-0.115,-0.028
+large,RT,0,-0.115,0.028

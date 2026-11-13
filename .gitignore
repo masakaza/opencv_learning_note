@@ -1,0 +1,7 @@
+/build/
+/target/
+/out/
+*.avi
+*.mp4
+*.mkv
+*.log

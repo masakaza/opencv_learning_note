@@ -1,0 +1,5 @@
+image,model,corner,u_px,v_px,annotation_type
+image.png,small,LT,128.911,524.290,teaching_estimate
+image.png,small,LB,185.193,735.349,teaching_estimate
+image.png,small,RB,549.453,585.788,teaching_estimate
+image.png,small,RT,512.441,419.235,teaching_estimate

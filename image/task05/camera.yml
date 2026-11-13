@@ -1,0 +1,16 @@
+%YAML:1.0
+---
+image_width: 1440
+image_height: 1080
+cameratrix_ma: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 1854.0432336165313, 0., 719.37368541404771, 0.,
+       1861.6438335199068, 539.63847956895006, 0., 0., 1. ]
+distortion_coefficients: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ -0.053318490072788056, 0.12243709644647328,
+       -0.00082790539777392749, 0.0018082902852639348, 0. ]

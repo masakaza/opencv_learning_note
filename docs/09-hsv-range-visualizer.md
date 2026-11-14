@@ -2,9 +2,9 @@
 
 ![OpenCV HSV 色彩范围示意](../assets/figures/hsv_range_indicator.png)
 
-## 为什么 Markdown 里不是可拖动控件
+## 111
 
-GitHub 的 Markdown 页面会过滤脚本，不会运行文档里嵌入的 JavaScript、表单逻辑或自定义控件。因此，单靠 `.md` 文件不能在浏览页面里安全地执行 H/S/V 滑块。文档里放的是静态范围指示图；可调的版本做成一个独立 OpenCV HighGUI 小程序，布局放在 `src/hsv_range_visualizer/`，有自己的 `CMakeLists.txt`，不改项目根目录的 CMake 配置。
+可调的版本做成一个独立 OpenCV HighGUI 小程序，布局放在 `src/hsv_range_visualizer/`，有自己的 `CMakeLists.txt`，不改项目根目录的 CMake 配置。
 
 ## 独立窗口功能
 

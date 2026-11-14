@@ -10,7 +10,7 @@
 |---|---|---|
 | `findContours(image, contours, mode, method)` | 从二值图提取边界点集合。`RETR_EXTERNAL` 只取最外层轮廓；`CHAIN_APPROX_SIMPLE` 压缩水平/垂直/斜线上的冗余点。 | `findContours(mask, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);` |
 | `contourArea(contour)` | 计算轮廓包围的面积，可过滤小噪声。 | `if (contourArea(c) > 150) ...` |
-| `minAreaRect(contour)` | 返回包围轮廓的最小面积旋转矩形 `RotatedRect`，包含 `center`、`size`、`angle`。 | `RotatedRect r = minAreaRect(c);` |
+| `minAreaRect(contour)` | 返回包围轮廓的最小面积旋转矩形 `RotatedRect`，包含 `center`、`size`、`angle`。angle为x轴沿着顺时针旋转第一次碰到矩形边框的角度 | `RotatedRect r = minAreaRect(c);` |
 | `RotatedRect::points(points)` | 把旋转矩形四个顶点写入数组。 | `Point2f p[4]; r.points(p);` |
 | `norm(p1-p2)` | 计算两个点差的欧氏长度，可从四个顶点中辨认长边。 | `float len = norm(p[0] - p[1]);` |
 | `atan2(y,x)` | 从分量计算带象限信息的弧度角。代码用 `atan2(abs(dx),abs(dy))` 得到相对竖直方向偏角，再转度数。 | `float deg = atan2(abs(dx),abs(dy))*180/CV_PI;` |

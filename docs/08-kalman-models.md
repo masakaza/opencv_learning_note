@@ -23,6 +23,7 @@
 | `init_cv_continuous_white_accel` | `[x,y,vx,vy]` | 均值上匀速，连续时间加速度为白噪声 | 帧间隔变化或以连续时间噪声强度建模 |
 | `init_ca_white_jerk_2d` | `[x,y,vx,vy,ax,ay]` | 位置、速度、加速度作为状态，jerk（加速度变化率）是噪声 | 目标在短时内持续加速，或轨迹弯曲但加速度较平滑 |
 | `init_ct_ekf_2d` + `predict_ct_ekf_2d` | `[x,y,vx,vy,ω]` | 匀速率转弯，转弯角速度允许随机游走 | 目标沿圆弧运动，速度方向持续旋转 |
+| `init_ct_variable_speed_ekf_2d` + `predict_ct_variable_speed_ekf_2d` | `[x,y,vx,vy,ω]` | 将切向与法向加速度噪声分开，允许速度大小与转弯轨迹偏离均值模型 | 转弯中速度有不规则变化 |
 
 初始化函数把 `A/H/Q/R` 和 `statePost` 设好，协方差初值为单位阵。第一次检测后应把位置、速度（必要时加速度或转弯角速度）写进 `kf.statePost`，不要把零状态当成真实目标位置。圆周模型是 EKF：每帧必须用 `predict_ct_ekf_2d` 计算非线性状态预测，再调用 OpenCV 的 `correct`；不能直接调用线性 `kf.predict()`。
 
@@ -153,6 +154,60 @@ Q[ω,ω]   = qω·dt
 
 `qₐ` 是连续加速度噪声谱密度，`qω` 是转弯率随机游走的噪声谱密度；两者单位与位置单位、时间单位有关。增大 `qₐ` 会让滤波器更快接受速度/轨迹变化，增大 `qω` 会让它更快允许转弯率改变。这里的 `Q` 忽略了噪声经过转弯动力学后产生的状态相关耦合，是便于学习和调参的近似；大 `dt` 或剧烈转弯时应采用更精确的 CT 离散噪声模型，或用 UKF/IMM 比较多个运动模型。
 
+### 非匀速转弯：切向/法向加速度噪声
+
+上面的 `Q` 把 x/y 加速度噪声设成相同强度，方向与目标速度无关。若转弯时速率会变化，可在当前速度方向建立局部坐标：
+
+`t = [vx, vy]ᵀ / sqrt(vx²+vy²)`，`n = [-tᵧ, tₓ]ᵀ`
+
+`t` 是切向，切向加速度会改变速度大小；`n` 是法向，法向加速度会改变运动方向和曲率。分别设置连续白噪声谱密度 `qₜ`、`qₙ`，先写出二维加速度协方差：
+
+```text
+Qₐ = qₜ t tᵀ + qₙ n nᵀ
+   = [ qₜtₓ² + qₙtᵧ²      (qₜ-qₙ)tₓtᵧ ]
+     [ (qₜ-qₙ)tₓtᵧ       qₜtᵧ² + qₙtₓ² ]
+```
+
+对状态顺序 `[x,y,vx,vy,ω]`，连续白加速度噪声形成的位置/速度协方差块为 `Qₐ` 的时间积分，转弯率仍使用随机游走：
+
+```text
+Q = [ dt³/3·Qₐ   dt²/2·Qₐ    0 ]
+    [ dt²/2·Qₐ   dt·Qₐ       0 ]
+    [ 0           0           qω·dt ]
+```
+
+展开为具体 5×5 矩阵：
+
+```text
+Q = [ dt³qxx/3  dt³qxy/3  dt²qxx/2  dt²qxy/2   0      ]
+    [ dt³qxy/3  dt³qyy/3  dt²qxy/2  dt²qyy/2   0      ]
+    [ dt²qxx/2  dt²qxy/2  dt qxx    dt qxy     0      ]
+    [ dt²qxy/2  dt²qyy/2  dt qxy    dt qyy     0      ]
+    [ 0          0          0          0          qωdt  ]
+```
+
+其中 `qxx/qxy/qyy` 是 `Qₐ` 的独立元素。`qₜ` 越大，滤波器越允许目标沿当前方向加速或减速；`qₙ` 越大，越允许速度方向偏离圆弧；`qω` 控制转弯率随时间漂移的程度。三者都是噪声谱密度，单位随像素/米和秒等状态单位变化。速度接近零时切向方向无法可靠计算，代码退回使用 `(qₜ+qₙ)/2` 的各向同性噪声。
+
+对应接口在每帧用当前估计的速度方向重算 `Q`，然后沿用 CT 的非线性预测与雅可比 `F`：
+
+```cpp
+kalman_models::init_ct_variable_speed_ekf_2d(
+    kf, dt, qTangential, qNormal, qTurnRate, rPosition);
+kf.statePost = (cv::Mat_<float>(5, 1) << x, y, vx, vy, omega);
+
+const cv::Mat& predicted =
+    kalman_models::predict_ct_variable_speed_ekf_2d(
+        kf, dt, qTangential, qNormal, qTurnRate);
+if (hasDetection) {
+    cv::Mat z = (cv::Mat_<float>(2, 1) << measuredX, measuredY);
+    kf.correct(z);
+} else {
+    kalman_models::commit_ct_ekf_prediction(kf);
+}
+```
+
+这个模型的平均运动方程仍假设当前步内匀速率转弯；非匀速由零均值过程噪声描述，因此它适合随机或未建模的加减速。若目标有持续的已知加速度偏置，应把切向加速度加入状态或控制输入，不能只调大 `qₜ`。该模型不强制固定几何半径：若要求严格沿同一圆周运动，应额外约束 `|ω|=speed/radius`，否则速度变化时估计半径也可能变化。
+
 ### 初始化与调用
 
 ```cpp
@@ -208,6 +263,6 @@ cv::Point2f vInit = (v0 + v1) * 0.5f;
 3. 按噪声假设推导 `Q`。记清楚参数是离散方差还是连续谱密度，以及时间单位。
 4. `R` 根据检测误差设置；它和 `Q` 描述不同来源的不确定性。
 5. 用对应长度的 `statePost` 初始化位置、速度、加速度和协方差。
-6. 线性模型每帧按 `predict()` → 有测量时 `correct(z)` 调用；圆周 CT 模型改为 `predict_ct_ekf_2d()` → 有测量时 `correct(z)`。
+6. 线性模型每帧按 `predict()` → 有测量时 `correct(z)` 调用；CT 模型分别用 `predict_ct_ekf_2d()` 或 `predict_ct_variable_speed_ekf_2d()` 做 EKF 预测，再在有测量时调用 `correct(z)`。
 
-`init_*` 函数放在 `include/kalman_motion_models.hpp`，只提供模型矩阵，不会改 `src/task_07/main.cpp` 的原有篮球检测流程。考核如果规定了不同状态排列、控制输入或观测量，应按题目重新组织矩阵，而不是机械照搬函数。
+相关初始化、噪声矩阵和 EKF 预测函数放在 `include/kalman_motion_models.hpp`，不会改 `src/task_07/main.cpp` 的原有篮球检测流程。考核如果规定了不同状态排列、控制输入或观测量，应按题目重新组织矩阵，而不是机械照搬函数。

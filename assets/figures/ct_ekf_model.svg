@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="470" viewBox="0 0 1080 470" role="img" aria-labelledby="title desc">
   <title id="title">协调转弯 EKF 状态与过程噪声示意</title>
-  <desc id="desc">圆弧上的目标位置与切线速度，以及状态向量和加速度、转弯率过程噪声。</desc>
+  <desc id="desc">圆弧上的目标位置与切线速度，以及状态向量、切向和法向加速度噪声与转弯率过程噪声。</desc>
   <defs>
     <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L10,5 L0,10 z" fill="#2864a5"/>
@@ -45,7 +45,7 @@
     <line x1="600" y1="214" x2="1010" y2="214" stroke="#e2e8f0" stroke-width="2"/>
     <text x="600" y="249" font-size="19" font-weight="700" fill="#172b46">过程噪声 Q</text>
     <rect x="600" y="268" width="11" height="11" rx="2" fill="#2864a5"/>
-    <text x="624" y="280" font-size="16" fill="#334860">qₐ：连续白加速度，允许速度偏离理想圆弧</text>
+    <text x="624" y="280" font-size="16" fill="#334860">qₜ / qₙ：切向变速与法向转弯偏差</text>
     <rect x="600" y="305" width="11" height="11" rx="2" fill="#d47b18"/>
     <text x="624" y="317" font-size="16" fill="#334860">qω：转弯率随机游走，允许弯曲程度改变</text>
     <text x="600" y="356" font-size="15" fill="#68778a">EKF 每帧线性化状态方程，并传播预测协方差</text>

@@ -10,7 +10,7 @@
 4. [灯条配对与透视变换](docs/04-pairing-and-perspective.md)
 5. [PnP 位姿估计与重投影误差](docs/05-pnp.md)
 6. [视频读写与目标关联](docs/06-video-and-tracking.md)
-7. [卡尔曼滤波目标跟踪](docs/07-kalman-filter.md)
+7. [卡尔曼滤波目标跟踪](docs/07-kalman-filter.md)：Task 07 线性 KF；KF/EKF 对比、完整调用和改造步骤见本 README 下文。
 8. [替换运动模型与过程噪声](docs/08-kalman-models.md)：随机游走、匀速/匀加速及协调转弯、变速转弯 EKF。
 9. [HSV 色彩范围指示器](docs/09-hsv-range-visualizer.md)：静态图示和可调节的 OpenCV 滑块工具。
 10. [源码索引](SOURCE_INDEX.md)

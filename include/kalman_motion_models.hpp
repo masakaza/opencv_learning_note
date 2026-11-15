@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <opencv2/opencv.hpp>
 
 // Optional Kalman motion/process-noise models for the Task 07 exercises.
@@ -130,6 +131,132 @@ inline void init_ca_white_jerk_2d(cv::KalmanFilter& kf,
     kf.measurementNoiseCov = measurement_noise_variance * cv::Mat::eye(2, 2, CV_32F);
     kf.statePost = cv::Mat::zeros(6, 1, CV_32F);
     kf.errorCovPost = cv::Mat::eye(6, 6, CV_32F);
+}
+
+// Coordinated-turn (CT) EKF state order: [x, y, vx, vy, omega].
+// q_acceleration and q_turn_rate are continuous-time noise spectral densities.
+// The Q below is a practical small-step approximation: independent Cartesian
+// acceleration noise plus a random walk in turn rate.
+inline cv::Mat ct_process_noise_2d(float dt,
+                                   float acceleration_spectral_density,
+                                   float turn_rate_spectral_density)
+{
+    CV_Assert(dt >= 0.0f);
+    CV_Assert(acceleration_spectral_density >= 0.0f);
+    CV_Assert(turn_rate_spectral_density >= 0.0f);
+
+    const float dt2 = dt * dt;
+    const float dt3 = dt2 * dt;
+    cv::Mat q = cv::Mat::zeros(5, 5, CV_32F);
+
+    // Continuous white acceleration blocks at indices (x,vx) and (y,vy).
+    const float qPosition = acceleration_spectral_density * dt3 / 3.0f;
+    const float qPositionVelocity = acceleration_spectral_density * dt2 / 2.0f;
+    const float qVelocity = acceleration_spectral_density * dt;
+    q.at<float>(0, 0) = qPosition;
+    q.at<float>(0, 2) = qPositionVelocity;
+    q.at<float>(2, 0) = qPositionVelocity;
+    q.at<float>(2, 2) = qVelocity;
+    q.at<float>(1, 1) = qPosition;
+    q.at<float>(1, 3) = qPositionVelocity;
+    q.at<float>(3, 1) = qPositionVelocity;
+    q.at<float>(3, 3) = qVelocity;
+
+    // omega follows a continuous-time random walk: d(omega)=sqrt(qw)dW.
+    q.at<float>(4, 4) = turn_rate_spectral_density * dt;
+    return q;
+}
+
+inline void init_ct_ekf_2d(cv::KalmanFilter& kf,
+                          float dt,
+                          float acceleration_spectral_density,
+                          float turn_rate_spectral_density,
+                          float measurement_noise_variance)
+{
+    CV_Assert(dt > 0.0f);
+    CV_Assert(measurement_noise_variance >= 0.0f);
+
+    kf.init(5, 2, 0, CV_32F);
+    kf.transitionMatrix = cv::Mat::eye(5, 5, CV_32F);
+    kf.measurementMatrix = (cv::Mat_<float>(2, 5) <<
+        1, 0, 0, 0, 0,
+        0, 1, 0, 0, 0);
+    kf.processNoiseCov = ct_process_noise_2d(
+        dt, acceleration_spectral_density, turn_rate_spectral_density);
+    kf.measurementNoiseCov =
+        measurement_noise_variance * cv::Mat::eye(2, 2, CV_32F);
+    kf.statePost = cv::Mat::zeros(5, 1, CV_32F);
+    kf.errorCovPost = cv::Mat::eye(5, 5, CV_32F);
+}
+
+// Nonlinear coordinated-turn state prediction and EKF covariance prediction.
+// Call kf.correct(positionMeasurement) after this when a detection is available.
+// OpenCV's predict() is linear; this helper computes f(x) and its Jacobian F
+// explicitly, then fills statePre/errorCovPre for the standard correct() call.
+inline const cv::Mat& predict_ct_ekf_2d(cv::KalmanFilter& kf,
+                                       float dt,
+                                       float acceleration_spectral_density,
+                                       float turn_rate_spectral_density)
+{
+    CV_Assert(kf.statePost.rows == 5 && kf.statePost.cols == 1);
+    CV_Assert(dt >= 0.0f);
+
+    const float x = kf.statePost.at<float>(0);
+    const float y = kf.statePost.at<float>(1);
+    const float vx = kf.statePost.at<float>(2);
+    const float vy = kf.statePost.at<float>(3);
+    const float omega = kf.statePost.at<float>(4);
+    const float angle = omega * dt;
+    const float s = std::sin(angle);
+    const float c = std::cos(angle);
+
+    float a, b, da, db;
+    if (std::abs(omega) < 1e-4f) {
+        const float omega2 = omega * omega;
+        const float dt2 = dt * dt;
+        const float dt3 = dt2 * dt;
+        const float dt4 = dt3 * dt;
+        const float dt5 = dt4 * dt;
+        const float dt6 = dt5 * dt;
+        a = dt - omega2 * dt3 / 6.0f;
+        b = omega * dt2 / 2.0f - omega * omega2 * dt4 / 24.0f;
+        da = -omega * dt3 / 3.0f + omega * omega2 * dt5 / 30.0f;
+        db = dt2 / 2.0f - omega2 * dt4 / 8.0f + omega2 * omega2 * dt6 / 144.0f;
+    } else {
+        a = s / omega;
+        b = (1.0f - c) / omega;
+        da = (omega * dt * c - s) / (omega * omega);
+        db = (omega * dt * s - (1.0f - c)) / (omega * omega);
+    }
+
+    kf.statePre = (cv::Mat_<float>(5, 1) <<
+        x + a * vx - b * vy,
+        y + b * vx + a * vy,
+        c * vx - s * vy,
+        s * vx + c * vy,
+        omega);
+
+    cv::Mat f = (cv::Mat_<float>(5, 5) <<
+        1, 0, a, -b, da * vx - db * vy,
+        0, 1, b,  a, db * vx + da * vy,
+        0, 0, c, -s, -dt * (s * vx + c * vy),
+        0, 0, s,  c,  dt * (c * vx - s * vy),
+        0, 0, 0,  0, 1);
+
+    kf.transitionMatrix = f;
+    kf.processNoiseCov = ct_process_noise_2d(
+        dt, acceleration_spectral_density, turn_rate_spectral_density);
+    kf.errorCovPre = f * kf.errorCovPost * f.t() + kf.processNoiseCov;
+    return kf.statePre;
+}
+
+// Use when a detection is missing after predict_ct_ekf_2d(). OpenCV's normal
+// predict() promotes the prediction to the posterior automatically; the EKF
+// helper leaves it in the Pre fields so correct() can consume it if available.
+inline void commit_ct_ekf_prediction(cv::KalmanFilter& kf)
+{
+    kf.statePre.copyTo(kf.statePost);
+    kf.errorCovPre.copyTo(kf.errorCovPost);
 }
 
 } // namespace kalman_models

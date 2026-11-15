@@ -196,4 +196,4 @@ Point2f filtered = centers.second;
 
 ## 模型不只一种
 
-本任务的 `init_kalman_model` 是匀速状态 `[x,y,vx,vy]` 配合每帧随机加速度扰动的模型。考核若改变运动方程，必须同时考虑状态维度、`transitionMatrix`、`measurementMatrix` 和 `processNoiseCov`。新增的 [运动模型与过程噪声说明](08-kalman-models.md) 和 `include/kalman_motion_models.hpp` 给出随机游走、连续白加速度匀速及白 jerk 匀加速等可选方案。
+本任务的 `init_kalman_model` 是匀速状态 `[x,y,vx,vy]` 配合每帧随机加速度扰动的模型。考核若改变运动方程，必须同时考虑状态维度、`transitionMatrix`、`measurementMatrix` 和 `processNoiseCov`。新增的 [运动模型与过程噪声说明](08-kalman-models.md) 和 `include/kalman_motion_models.hpp` 给出随机游走、不同匀速噪声、白 jerk 匀加速和协调转弯 EKF 等可选方案。

@@ -21,7 +21,7 @@
 |---|---|
 | `include/lighting_cap.hpp` | `get_blue_mask`、`get_red_mask`、`calculate_draw`、`calculate_light`、`draw_doub_light`、`draw_point`、`use_perspectTrans` |
 | `include/task_func.hpp` | `calculate_draw`（轮廓框绘制草稿）、`draw_rect`、`use_perspectTrans`、`read_camera_config`、`calculate_rmse`、`pnp_calculate`、`mousecb`、`traker`、`update_kal_traker`（多目标关联草稿） |
-| `include/kalman_motion_models.hpp` | 随机游走、离散白加速度匀速、连续白加速度匀速、白 jerk 匀加速模型初始化函数 |
+| `include/kalman_motion_models.hpp` | 随机游走、离散/连续白加速度匀速、白 jerk 匀加速、协调转弯 EKF 初始化/预测/缺测推进 |
 | `src/hsv_range_visualizer/main.cpp` | HSV/H/S/V 滑块、HSV 色相带与 S/V 平面可视化、上下界颜色预览 |
 | `src/hsv_range_visualizer/CMakeLists.txt` | 独立的 HSV 可视化程序构建配置；不接入根 CMake |
 
@@ -35,4 +35,5 @@
 - `docs/06-video-and-tracking.md`：视频 I/O、计时和中心点关联。
 - `docs/07-kalman-filter.md`：线性卡尔曼滤波状态方程与代码映射。
 - `docs/08-kalman-models.md`：不同状态模型和过程噪声矩阵的选择与切换。
+- `assets/figures/ct_ekf_model.svg`：协调转弯状态量、切向速度和两类过程噪声示意图。
 - `docs/09-hsv-range-visualizer.md`：HSV 指示图、交互工具用法和 `inRange` 阈值示例。

@@ -11,7 +11,7 @@
 5. [PnP 位姿估计与重投影误差](docs/05-pnp.md)
 6. [视频读写与目标关联](docs/06-video-and-tracking.md)
 7. [卡尔曼滤波目标跟踪](docs/07-kalman-filter.md)
-8. [替换运动模型与过程噪声](docs/08-kalman-models.md)：随机游走、两种匀速噪声和匀加速白 jerk 模型。
+8. [替换运动模型与过程噪声](docs/08-kalman-models.md)：随机游走、匀速/匀加速噪声模型和圆周运动 EKF。
 9. [HSV 色彩范围指示器](docs/09-hsv-range-visualizer.md)：静态图示和可调节的 OpenCV 滑块工具。
 10. [源码索引](SOURCE_INDEX.md)
 

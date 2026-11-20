@@ -14,32 +14,21 @@
 
 ## 导出固定输入尺寸的 ONNX
 
-在终端里先进入训练时用的 `yolo` Conda 环境，再通过 Python 的 `YOLO.export()` 导出。把 `checkpoint` 改成单类别检测模型的 `best.pt` 路径。`(640, 1280)` 是要导出的输入边长列表，可以按需修改。
+在终端激活 `yolo` Conda 环境，把 `你的训练目录` 换成实际的训练目录名，然后执行以下命令。
 
 ```bash
 conda activate yolo
-python - <<'PY'
-from pathlib import Path
-
-from ultralytics import YOLO
-
-checkpoint = Path("/path/to/weights/best.pt")
-model = YOLO(checkpoint)
-
-for imgsz in (640, 1280):
-    exported = Path(model.export(
-        format="onnx", imgsz=imgsz, batch=1, opset=12,
-        dynamic=False, simplify=True, half=False,
-    ))
-    output = exported.with_name(f"{checkpoint.stem}{imgsz}.onnx")
-    exported.replace(output)
-    print(output)
-PY
+yolo export \
+    model=/home/zmasakaza/yolo/runs/detect/你的训练目录/weights/best.pt \
+    format=onnx \
+    imgsz=1280 \
+    batch=1 \
+    opset=12 \
+    dynamic=False \
+    half=False
 ```
 
-每次导出后立即把 `best.onnx` 重命名，分别保留 `best640.onnx` 和 `best1280.onnx`。`dynamic=False` 固定输入尺寸，运行 `dnn_test` 时，传入的边长必须与导出时的 `imgsz` 一致。示例读取原始检测输出并自行执行 NMS。[Ultralytics 导出参数](https://docs.ultralytics.com/modes/export/)
-
-`half=False` 沿用原导出设置，输出为 FP32。如果新版 Ultralytics 移除了 `half` 参数，可以将它替换为 `quantize=32`。
+导出的 `best.onnx` 位于 `best.pt` 同一目录。要保留多种输入尺寸，先把本次生成的文件改名为 `best1280.onnx`，再把 `imgsz=1280` 改成 `imgsz=640` 重新导出，并将新文件改名为 `best640.onnx`。运行 `dnn_test` 时，传入的边长应与导出时的 `imgsz` 一致。[Ultralytics 导出参数](https://docs.ultralytics.com/modes/export/)
 
 用同一有标注验证集和相同的置信度、NMS 阈值对比两种输入尺寸，重点看小目标召回率、误检和推理耗时。根据验证结果选择部署尺寸。
 

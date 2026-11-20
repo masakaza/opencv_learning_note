@@ -12,6 +12,26 @@
 | [`src/dnn_test/main.cpp`](../src/dnn_test/main.cpp) | 视频示例 | 串联以上接口，支持逐帧查看或输出标注视频 |
 | [`src/dnn_test/CMakeLists.txt`](../src/dnn_test/CMakeLists.txt) | 独立构建入口 | 使用 C++17 和 OpenCV 4 的 `core`、`imgproc`、`video`、`videoio`、`highgui`、`dnn` |
 
+## 导出固定输入尺寸的 ONNX
+
+在训练使用的 Ultralytics 环境中，把 `checkpoint` 改成单类别检测模型的 `best.pt` 路径。下面沿用原先的导出参数，从同一份权重分别生成 640×640 和 1280×1280 两个模型。
+
+```bash
+(
+  set -e
+  checkpoint=/path/to/weights/best.pt
+  for imgsz in 640 1280; do
+    yolo export model="$checkpoint" format=onnx imgsz="$imgsz" batch=1 \
+      opset=12 dynamic=False simplify=True half=False
+    mv -- "${checkpoint%.pt}.onnx" "${checkpoint%.pt}${imgsz}.onnx"
+  done
+)
+```
+
+两次导出默认都会在权重目录生成 `best.onnx`。命令在每次导出后重命名，分别保留 `best640.onnx` 和 `best1280.onnx`。`dynamic=False` 固定输入尺寸，运行 `dnn_test` 时，传入的边长必须与导出时的 `imgsz` 一致。示例读取原始检测输出并自行执行 NMS。[Ultralytics 导出参数](https://docs.ultralytics.com/modes/export/)
+
+用同一有标注验证集和相同的置信度、NMS 阈值对比两种输入尺寸，重点看小目标召回率、误检和推理耗时。根据验证结果选择部署尺寸。
+
 ## 编译和运行
 
 从仓库根目录执行。准备自己的视频和单类别检测 ONNX。解析器使用 float32 的 `[1, 5, N]` 输出，五个通道依次是 `cx, cy, w, h, score`，坐标以模型输入像素为单位。
@@ -19,13 +39,13 @@
 ```bash
 cmake -S src/dnn_test -B build/dnn_test
 cmake --build build/dnn_test -j
-./build/dnn_test/dnn_test /path/to/model.onnx /path/to/input.mp4 1280
+./build/dnn_test/dnn_test /path/to/best1280.onnx /path/to/input.mp4 1280
 ```
 
 模型输入是正方形，最后一个数值填写 ONNX 的输入边长，默认值为 `1280`。默认使用 OpenCV CPU 后端。窗口中按任意普通键前进一帧，按 `q` 或 `Esc` 退出。需要无窗口运行时，给出输出路径，视频编解码取决于本机的 OpenCV Video I/O 后端。
 
 ```bash
-./build/dnn_test/dnn_test /path/to/model.onnx /path/to/input.mp4 640 result.mp4
+./build/dnn_test/dnn_test /path/to/best640.onnx /path/to/input.mp4 640 result.mp4
 ```
 
 ## 每帧处理顺序

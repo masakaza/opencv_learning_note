@@ -13,7 +13,9 @@
 7. [卡尔曼滤波目标跟踪](docs/07-kalman-filter.md)：Task 07 线性 KF；KF/EKF 对比、完整调用和改造步骤见本 README 下文。
 8. [替换运动模型与过程噪声](docs/08-kalman-models.md)：随机游走、匀速/匀加速及协调转弯、变速转弯 EKF。
 9. [HSV 色彩范围指示器](docs/09-hsv-range-visualizer.md)：静态图示和可调节的 OpenCV 滑块工具。
-10. [源码索引](SOURCE_INDEX.md)
+10. [OpenCV DNN 多目标跟踪封装与示例](docs/10-yolo-multi-object-tracking.md)，包含 ONNX 推理、HSV 筛选与轨迹更新。
+11. [卡尔曼滤波参数调节](docs/11-kalman-parameter-tuning.md)，包含六种 KF/EKF 模型的参数、默认值和调参流程。
+12. [源码索引](SOURCE_INDEX.md)
 
 ## 环境与编译
 
@@ -35,11 +37,21 @@ cd build
 
 依次可运行 `task_02` 到 `task_07`、`image_base`。`task_06` 和 `task_07` 需要对应的 AVI 输入视频；`cap_video` 需要 `video/031.mp4`。这些较大的原始视频不放入本仓库，需把自己的样例视频放到代码指定位置。图片任务所需的小型示例图和 Task 05 相机参数文件随仓库提供。
 
+### DNN 跟踪示例
+
+`src/dnn_test/` 使用独立的 CMake 入口，依赖含 `dnn` 模块的 OpenCV 4。准备单类别 YOLO ONNX 和输入视频后，从仓库根目录执行以下命令。 [模型格式、运行选项与框颜色说明](docs/10-yolo-multi-object-tracking.md)
+
+```bash
+cmake -S src/dnn_test -B build/dnn_test
+cmake --build build/dnn_test -j
+./build/dnn_test/dnn_test /path/to/model.onnx /path/to/input.mp4 1280
+```
+
 ## 仓库目录
 
 ```text
 src/                 原始练习程序和各目标的 CMakeLists.txt
-include/             灯条检测、关联、透视变换与可切换卡尔曼模型
+include/             灯条检测、几何变换、DNN 推理与 KF/EKF 跟踪封装
 image/               代码引用的小型输入图片及 PnP 标定数据
 assets/figures/      文档使用的处理结果图
 image_output/        运行时结果目录；已提交少量 PNG 作为学习示例

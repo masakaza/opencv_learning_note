@@ -14,6 +14,7 @@
 | `src/task_07/main.cpp` | 篮球检测与卡尔曼滤波 | `KalmanFilter::predict/correct`、`findContours`、`minEnclosingCircle` |
 | `src/cap_video/main.cpp` | 视频逐帧解码并保存图片 | `VideoCapture::read/release`、`imwrite` |
 | `src/test/main.cpp` | CMake 最小构建目标（无 OpenCV 逻辑） | — |
+| [`src/dnn_test/main.cpp`](src/dnn_test/main.cpp) | YOLO + HSV + KF/EKF 多目标跟踪 | `VideoCapture`、`VideoWriter`、`imshow` |
 
 ## 辅助头文件
 
@@ -22,6 +23,9 @@
 | `include/lighting_cap.hpp` | `get_blue_mask`、`get_red_mask`、`calculate_draw`、`calculate_light`、`draw_doub_light`、`draw_point`、`use_perspectTrans` |
 | `include/task_func.hpp` | `calculate_draw`（轮廓框绘制草稿）、`draw_rect`、`use_perspectTrans`、`read_camera_config`、`calculate_rmse`、`pnp_calculate`、`mousecb`、`traker`、`update_kal_traker`（多目标关联草稿） |
 | `include/kalman_motion_models.hpp` | 随机游走、匀速/匀加速、协调转弯与切向/法向变速转弯 EKF 模型 |
+| [`include/model_using.hpp`](include/model_using.hpp) | `model_load`、`letterbox`、`image_premdelopt`、`forward_getrect` |
+| [`include/common_func.hpp`](include/common_func.hpp) | `TrackerManager`、`filter_rect_by_hsv`、`get_rect_withhsv` 与绘图 |
+| [`include/cerateEKF.hpp`](include/cerateEKF.hpp) | 5D/6D 协调转弯 EKF、通用运动 EKF、匀速/匀加速 KF 和 Singer KF |
 | `src/hsv_range_visualizer/main.cpp` | HSV/H/S/V 滑块、HSV 色相带与 S/V 平面可视化、上下界颜色预览 |
 | `src/hsv_range_visualizer/CMakeLists.txt` | 独立的 HSV 可视化程序构建配置；不接入根 CMake |
 
@@ -37,3 +41,5 @@
 - `docs/08-kalman-models.md`：不同状态模型和过程噪声矩阵的选择与切换。
 - `assets/figures/ct_ekf_model.svg`：协调转弯状态量、切向速度和两类过程噪声示意图。
 - `docs/09-hsv-range-visualizer.md`：HSV 指示图、交互工具用法和 `inRange` 阈值示例。
+- [`docs/10-yolo-multi-object-tracking.md`](docs/10-yolo-multi-object-tracking.md) 介绍示例构建、检测与跟踪接口、滤波器切换。
+- [`docs/11-kalman-parameter-tuning.md`](docs/11-kalman-parameter-tuning.md) 记录参数作用、六种模型默认值和对照实验方法。

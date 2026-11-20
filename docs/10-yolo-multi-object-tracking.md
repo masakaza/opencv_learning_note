@@ -28,7 +28,7 @@ yolo export \
     half=False
 ```
 
-导出的 `best.onnx` 位于 `best.pt` 同一目录。要保留多种输入尺寸，先把本次生成的文件改名为 `best1280.onnx`，再把 `imgsz=1280` 改成 `imgsz=640` 重新导出，并将新文件改名为 `best640.onnx`。运行 `dnn_test` 时，传入的边长应与导出时的 `imgsz` 一致。[Ultralytics 导出参数](https://docs.ultralytics.com/modes/export/)
+导出的 `best.onnx` 位于 `best.pt` 同一目录。要保留多种输入尺寸,尺寸大小为320的整数倍，先把本次生成的文件改名为 `best1280.onnx`，再把 `imgsz=1280` 改成 `imgsz=640` 重新导出，并将新文件改名为 `best640.onnx`。运行 `dnn_test` 时，传入的边长应与导出时的 `imgsz` 一致。[Ultralytics 导出参数](https://docs.ultralytics.com/modes/export/)
 
 用同一有标注验证集和相同的置信度、NMS 阈值对比两种输入尺寸，重点看小目标召回率、误检和推理耗时。根据验证结果选择部署尺寸。
 
